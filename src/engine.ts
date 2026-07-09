@@ -1,10 +1,10 @@
 import { SimulatedEscrowLedger, type Payout, type Stake } from './ledger';
-import { verifyStatProof } from './merkle';
+import { verifyAnchoredChain, verifyStatProof } from './merkle';
 import { buildReceipt } from './receipt';
 import { resolveMarket } from './resolver';
 import { transition } from './stateMachine';
 import type { Market, MarketResult, SettlementReceipt, TimelineEvent } from './types';
-import type { TxlineScoreUpdate, TxlineStatValidation } from './txline/types';
+import type { RootAnchor, TxlineScoreUpdate, TxlineStatValidation } from './txline/types';
 
 export interface SettlementOutcome {
   market: Market;
@@ -22,6 +22,7 @@ export class SettlementEngine {
   private market: Market;
   private finalUpdate: TxlineScoreUpdate | null = null;
   private validation: TxlineStatValidation | null = null;
+  private anchor: RootAnchor | null = null;
 
   constructor(marketDef: Omit<Market, 'state'>) {
     this.market = { ...marketDef, state: 'created' };
@@ -62,14 +63,34 @@ export class SettlementEngine {
     );
   }
 
-  // Verify the TxLINE stat proof. Failure routes to dispute review, never to
-  // silent settlement.
-  attachProof(validation: TxlineStatValidation): boolean {
+  // Verify the TxLINE proof. With an anchor, the full three-level chain must
+  // hold (stat -> event root -> fixture sub-tree -> daily root); without one,
+  // only the stat proof is checked. Any failure routes to dispute review,
+  // never to silent settlement.
+  attachProof(validation: TxlineStatValidation, anchor?: RootAnchor): boolean {
     if (!this.finalUpdate) throw new Error('no final result observed yet');
     this.validation = validation;
+    this.anchor = anchor ?? null;
+    if (anchor) {
+      const chain = verifyAnchoredChain(validation, anchor.dailyRoot);
+      if (chain.fullyAnchored) {
+        this.move(
+          'proof_verified_or_simulated',
+          `full chain verified: stat -> eventStatRoot -> sub-tree -> daily root ${anchor.dailyRoot.slice(0, 12)}… (${anchor.source})`,
+          validation.ts,
+        );
+        return true;
+      }
+      this.move(
+        'needs_dispute_review',
+        `proof chain FAILED (stat:${chain.statOk} subTree:${chain.subTreeOk} mainTree:${chain.mainTreeOk}); settlement blocked`,
+        validation.ts,
+      );
+      return false;
+    }
     const ok = verifyStatProof(validation);
     if (ok) {
-      this.move('proof_verified_or_simulated', `stat proof verified against eventStatRoot ${validation.eventStatRoot.slice(0, 12)}…`, validation.ts);
+      this.move('proof_verified_or_simulated', `stat proof verified against eventStatRoot ${validation.eventStatRoot.slice(0, 12)}… (unanchored)`, validation.ts);
     } else {
       this.move('needs_dispute_review', 'stat proof FAILED verification; settlement blocked', validation.ts);
     }
@@ -91,6 +112,7 @@ export class SettlementEngine {
       proofVerified: true,
       result,
       sourceEndpoint,
+      anchor: this.anchor,
     });
     const { payouts, dust } = this.ledger.settle(this.market.marketId, result);
     this.move(
