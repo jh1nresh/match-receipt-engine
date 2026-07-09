@@ -30,3 +30,9 @@ Proof-gated settlement demo for the Superteam World Cup Hackathon
   truthfully. No mainnet, no real-money language.
 - Unknown TxLINE `gameState` values must never map to FINISHED.
 - Engine (`src/`, minus `demo.ts`) must not import from `app/` or Next.js.
+- LIVE-MODE GATE (differential review 2026-07-09, HIGH): `verifyStatProof`
+  only proves self-consistency of supplied data. Live-sourced validations
+  must NOT reach `attachProof`/settlement until `eventStatRoot` is anchored
+  to the on-chain main root (verify `subTreeProof`/`mainTreeProof` against a
+  published root, or a TxLINE signature). Until then, live data is
+  display-only; settlement runs on fixtures.

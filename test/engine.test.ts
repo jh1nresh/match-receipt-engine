@@ -201,4 +201,14 @@ describe('engine guards', () => {
     engine.observe({ ...finalUpdate(2, 1), fixtureId: 'other-fixture' });
     expect(engine.state).toBe('awaiting_result');
   });
+
+  it('ignores re-emitted final updates instead of throwing (feed idempotency)', () => {
+    const engine = new SettlementEngine(fixture.market);
+    engine.fund(fixture.stakes);
+    engine.observe(finalUpdate(2, 1));
+    expect(engine.state).toBe('receipt_observed');
+    engine.observe(finalUpdate(2, 1));
+    engine.observe({ ...finalUpdate(2, 1), gameState: 'LIVE' });
+    expect(engine.state).toBe('receipt_observed');
+  });
 });

@@ -41,8 +41,18 @@ describe('goal totalling', () => {
     expect(totalGoals({ H1: score(1), HT: score(1), H2: score(2), ET1: score(1) })).toBe(4);
   });
 
+  it('skips HT case-insensitively', () => {
+    expect(totalGoals({ H1: score(1), ht: score(1), H2: score(2) })).toBe(3);
+  });
+
   it('handles missing score blocks', () => {
     expect(totalGoals(undefined)).toBe(0);
+  });
+
+  it('rejects non-integer or negative Goals from the wire', () => {
+    expect(() => totalGoals({ H1: { ...score(0), Goals: Number.NaN } })).toThrow(/invalid Goals/);
+    expect(() => totalGoals({ H1: { ...score(0), Goals: -1 } })).toThrow(/invalid Goals/);
+    expect(() => totalGoals({ H1: { ...score(0), Goals: '2' as unknown as number } })).toThrow(/invalid Goals/);
   });
 });
 

@@ -26,7 +26,12 @@ export function totalGoals(score: WireSoccerTotalScore | undefined): number {
   if (!score) return 0;
   let goals = 0;
   for (const [period, entry] of Object.entries(score)) {
-    if (period === 'HT' || !entry) continue;
+    if (period.toUpperCase() === 'HT' || !entry) continue;
+    // Trust boundary: wire data is untrusted JSON. A non-integer or negative
+    // Goals must reject the feed here, never steer resolution downstream.
+    if (!Number.isInteger(entry.Goals) || entry.Goals < 0) {
+      throw new Error(`invalid Goals value in period ${period}: ${String(entry.Goals)}`);
+    }
     goals += entry.Goals;
   }
   return goals;
