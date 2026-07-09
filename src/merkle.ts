@@ -23,11 +23,35 @@ export function verifyStatProof(validation: TxlineStatValidation): boolean {
   return foldProof(leaf, validation.statProof) === validation.eventStatRoot;
 }
 
-// Fixture/test helper: build a real Merkle tree over stat strings and return
+// Full three-level chain per the TxODDS oracle hierarchy:
+// stat -> eventStatRoot -> fixture sub-tree root -> daily root (on-chain).
+// Level linkage encoding is our documented assumption pending the published
+// IDL / a live payload; each level is reported separately so a mismatch is
+// diagnosable, and any failure blocks settlement.
+export interface ChainVerification {
+  statOk: boolean;
+  subTreeOk: boolean | null;
+  mainTreeOk: boolean | null;
+  fullyAnchored: boolean;
+}
+
+export function verifyAnchoredChain(validation: TxlineStatValidation, dailyRoot?: string): ChainVerification {
+  const statOk = verifyStatProof(validation);
+  const subTreeOk = validation.summary
+    ? foldProof(validation.eventStatRoot, validation.subTreeProof) === validation.summary.eventStatsSubTreeRoot
+    : null;
+  const mainTreeOk =
+    validation.summary && dailyRoot
+      ? foldProof(validation.summary.eventStatsSubTreeRoot, validation.mainTreeProof) === dailyRoot
+      : null;
+  return { statOk, subTreeOk, mainTreeOk, fullyAnchored: statOk && subTreeOk === true && mainTreeOk === true };
+}
+
+// Fixture/test helper: build a Merkle tree over pre-hashed leaves and return
 // the proof for one leaf. Odd layers duplicate the last node.
-export function buildStatProof(stats: string[], index: number): { eventStatRoot: string; statProof: ProofNode[] } {
-  if (index < 0 || index >= stats.length) throw new Error(`index ${index} out of range`);
-  let layer = stats.map((s) => sha256Hex(s));
+export function buildProofFromLeafHashes(leafHashes: string[], index: number): { root: string; proof: ProofNode[] } {
+  if (index < 0 || index >= leafHashes.length) throw new Error(`index ${index} out of range`);
+  let layer = [...leafHashes];
   let pos = index;
   const proof: ProofNode[] = [];
   while (layer.length > 1) {
@@ -41,5 +65,10 @@ export function buildStatProof(stats: string[], index: number): { eventStatRoot:
     layer = next;
     pos = Math.floor(pos / 2);
   }
-  return { eventStatRoot: layer[0]!, statProof: proof };
+  return { root: layer[0]!, proof };
+}
+
+export function buildStatProof(stats: string[], index: number): { eventStatRoot: string; statProof: ProofNode[] } {
+  const { root, proof } = buildProofFromLeafHashes(stats.map((s) => sha256Hex(s)), index);
+  return { eventStatRoot: root, statProof: proof };
 }

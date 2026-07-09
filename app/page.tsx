@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { getDemoFixture, runDemo } from '@/src/demo';
+import { verifyAnchoredChain } from '@/src/merkle';
 import type { MarketState } from '@/src/types';
 
 function stateTone(state: MarketState): string {
@@ -30,6 +31,11 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ t
   const outcome = runDemo(tamper);
   const { market, receipt, payouts, dust, timeline } = outcome;
   const totalStaked = fixture.stakes.reduce((s, x) => s + x.amount, 0);
+  const validation = tamper
+    ? { ...fixture.validation, statToProve: fixture.validation.statToProve.replace('2-1', '9-0') }
+    : fixture.validation;
+  const chain = verifyAnchoredChain(validation, fixture.anchoring?.dailyRoot);
+  const chainMark = (ok: boolean | null) => (ok === null ? '–' : ok ? '✓' : '✗');
 
   return (
     <main className="mx-auto max-w-5xl px-4 py-8">
@@ -174,18 +180,29 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ t
           <dl className="space-y-1.5 text-sm">
             <div>
               <dt className="text-neutral-500">stat to prove</dt>
-              <dd className="break-all text-neutral-200">
-                {tamper ? fixture.validation.statToProve.replace('2-1', '9-0') : fixture.validation.statToProve}
-              </dd>
+              <dd className="break-all text-neutral-200">{validation.statToProve}</dd>
             </div>
             <div>
               <dt className="text-neutral-500">event stat root (TxLINE)</dt>
-              <dd className="break-all tabular-nums text-neutral-200">{fixture.validation.eventStatRoot}</dd>
+              <dd className="break-all tabular-nums text-neutral-200">{validation.eventStatRoot}</dd>
             </div>
+            {validation.summary ? (
+              <div>
+                <dt className="text-neutral-500">fixture sub-tree root</dt>
+                <dd className="break-all tabular-nums text-neutral-200">{validation.summary.eventStatsSubTreeRoot}</dd>
+              </div>
+            ) : null}
+            {fixture.anchoring ? (
+              <div>
+                <dt className="text-neutral-500">daily root anchor ({fixture.anchoring.source})</dt>
+                <dd className="break-all tabular-nums text-neutral-200">{fixture.anchoring.dailyRoot}</dd>
+              </div>
+            ) : null}
             <div>
-              <dt className="text-neutral-500">verification</dt>
-              <dd className={receipt ? 'text-emerald-400' : 'text-red-400'}>
-                {receipt ? 'sha256(stat) folded through proof path == root ✓' : 'recomputed root does not match ✗'}
+              <dt className="text-neutral-500">proof chain</dt>
+              <dd className={chain.fullyAnchored ? 'text-emerald-400' : 'text-red-400'}>
+                stat {chainMark(chain.statOk)} · sub-tree {chainMark(chain.subTreeOk)} · daily root {chainMark(chain.mainTreeOk)}
+                {chain.fullyAnchored ? ' — fully anchored' : ' — settlement blocked'}
               </dd>
             </div>
           </dl>

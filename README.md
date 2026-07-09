@@ -26,6 +26,12 @@ proof passes a deterministic rule.
   (`statToProve`, `eventStatRoot`, `statProof` of `{hash, isRightSibling}`
   nodes) are verified by recomputing the root. A tampered stat or root fails
   verification and routes to dispute review — it can never settle.
+- **On-chain root anchoring**: the full three-level chain
+  (`stat → eventStatRoot → fixture sub-tree → daily root`) is verified against
+  a daily-root anchor. `src/txline/anchoring.ts` derives the Txoracle
+  `DailyScoresMerkleRoots` PDA (`"daily_scores_roots"` + epochDay u16 LE) and
+  reads real published roots from mainnet/devnet via public RPC — no wallet
+  needed. Probe it live: `npx tsx scripts/check-anchoring.ts 20641`.
 - **Deterministic resolver**: one market type (`TEAM_WIN`; draw resolves NO).
   Pure function, no model, no clock.
 - **Settlement state machine**: `created → funded_or_simulated →
@@ -83,10 +89,13 @@ TXLINE_API_TOKEN=... # then wire TxlineClient into the feed instead of fixtures
 
 `src/txline/adapter.ts` normalizes wire payloads (gameState mapping is
 conservative: unknown states are never treated as final). Known gap: TxLINE's
-on-chain leaf encoding for `ScoreStat` is not documented, so live proofs are
-displayed but cannot be independently re-verified yet — fixture proofs use
-our own encoding and verify fully. This is a TxLINE API feedback item for the
-submission.
+leaf/link serialization for `ScoreStat` and the tree levels is not documented
+(and the on-chain daily-roots slot metadata differs from the docs), so live
+proofs are displayed but not yet independently re-verified — fixture proofs
+use our own documented encoding and verify the full three-level chain. The
+anchoring infrastructure (PDA derivation, root fetch, chain fold) is in place
+and validated against live accounts; the remaining unknown is serialization
+only. This is a TxLINE API feedback item for the submission.
 
 ## Roadmap to submission
 

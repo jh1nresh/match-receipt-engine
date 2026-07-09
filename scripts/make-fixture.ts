@@ -1,13 +1,16 @@
-// Generates fixtures/wc-final-replay.json with a Merkle-consistent stat proof.
+// Generates fixtures/wc-final-replay.json with a Merkle-consistent
+// THREE-LEVEL proof chain: stat -> eventStatRoot -> fixture sub-tree root ->
+// daily root (simulated on-chain anchor).
 // Run: npx tsx scripts/make-fixture.ts
 import { writeFileSync } from 'node:fs';
-import { buildStatProof } from '../src/merkle';
+import { buildProofFromLeafHashes, buildStatProof, sha256Hex } from '../src/merkle';
 import type { ReplayFixture } from '../src/types';
 import type { TxlineScoreUpdate } from '../src/txline/types';
 
 const fixtureId = 'wc2026-final-1001';
 const statToProve = `fixture:${fixtureId}:final_score:2-1`;
-// Sibling stats that would live in the same TxLINE event-stat tree.
+
+// Level 1: stats of the final score-update event.
 const stats = [
   `fixture:${fixtureId}:ht_score:1-0`,
   `fixture:${fixtureId}:goals_participant1:2`,
@@ -15,6 +18,20 @@ const stats = [
   statToProve,
 ];
 const { eventStatRoot, statProof } = buildStatProof(stats, stats.indexOf(statToProve));
+
+// Level 2: the fixture's event-stat sub-tree — event roots of every score
+// update in the fixture; our final event's root is the last leaf.
+const otherEventRoots = [1, 2, 3, 4].map((seq) => sha256Hex(`event-root:${fixtureId}:seq:${seq}`));
+const eventLeaves = [...otherEventRoots, eventStatRoot];
+const sub = buildProofFromLeafHashes(eventLeaves, eventLeaves.length - 1);
+
+// Level 3: daily main tree over fixture sub-tree roots (simulated on-chain
+// daily_scores_roots entry).
+const otherFixtureRoots = ['wc2026-sf-0998', 'wc2026-sf-0999', 'wc2026-3rd-1000'].map((f) =>
+  sha256Hex(`fixture-subtree:${f}`),
+);
+const mainLeaves = [...otherFixtureRoots, sub.root];
+const main = buildProofFromLeafHashes(mainLeaves, mainLeaves.length - 1);
 
 const base = {
   fixtureId,
@@ -52,11 +69,16 @@ const fixture: ReplayFixture = {
     statToProve,
     eventStatRoot,
     statProof,
-    subTreeProof: [],
-    mainTreeProof: [],
+    subTreeProof: sub.proof,
+    mainTreeProof: main.proof,
+    summary: { fixtureId, eventStatsSubTreeRoot: sub.root },
   },
   sourceEndpoint: '/api/scores/stat-validation (replayed fixture)',
+  anchoring: { dailyRoot: main.root, source: 'simulated' },
 };
 
 writeFileSync(new URL('../fixtures/wc-final-replay.json', import.meta.url), JSON.stringify(fixture, null, 2) + '\n');
-console.log('wrote fixtures/wc-final-replay.json, eventStatRoot', eventStatRoot);
+console.log('wrote fixtures/wc-final-replay.json');
+console.log('  eventStatRoot        ', eventStatRoot);
+console.log('  eventStatsSubTreeRoot', sub.root);
+console.log('  dailyRoot (simulated)', main.root);

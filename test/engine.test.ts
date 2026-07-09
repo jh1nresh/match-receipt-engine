@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { SettlementEngine } from '../src/engine';
 import { SimulatedEscrowLedger } from '../src/ledger';
-import { buildStatProof, foldProof, sha256Hex, verifyStatProof } from '../src/merkle';
+import { buildStatProof, foldProof, sha256Hex, verifyAnchoredChain, verifyStatProof } from '../src/merkle';
 import { canonicalJson } from '../src/receipt';
 import { resolveMarket } from '../src/resolver';
 import { runReplay } from '../src/replay';
@@ -50,6 +50,42 @@ describe('merkle proof verification (F3/F4)', () => {
       const { eventStatRoot, statProof } = buildStatProof(stats, i);
       expect(foldProof(sha256Hex(stats[i]!), statProof)).toBe(eventStatRoot);
     }
+  });
+});
+
+describe('three-level anchored chain (root anchoring HIGH gate)', () => {
+  const dailyRoot = fixture.anchoring!.dailyRoot;
+
+  it('fully anchors the fixture chain: stat -> event root -> sub-tree -> daily root', () => {
+    expect(verifyAnchoredChain(fixture.validation, dailyRoot)).toEqual({
+      statOk: true,
+      subTreeOk: true,
+      mainTreeOk: true,
+      fullyAnchored: true,
+    });
+  });
+
+  it('fails anchoring when the daily root does not match', () => {
+    const chain = verifyAnchoredChain(fixture.validation, sha256Hex('forged-daily-root'));
+    expect(chain.statOk).toBe(true);
+    expect(chain.mainTreeOk).toBe(false);
+    expect(chain.fullyAnchored).toBe(false);
+  });
+
+  it('fails anchoring when the sub-tree link is tampered', () => {
+    const tampered = {
+      ...fixture.validation,
+      summary: { ...fixture.validation.summary!, eventStatsSubTreeRoot: sha256Hex('forged-subtree') },
+    };
+    const chain = verifyAnchoredChain(tampered, dailyRoot);
+    expect(chain.subTreeOk).toBe(false);
+    expect(chain.fullyAnchored).toBe(false);
+  });
+
+  it('reports null levels without a summary or anchor (unanchored mode)', () => {
+    const { summary: _summary, ...noSummary } = fixture.validation;
+    expect(verifyAnchoredChain(noSummary, dailyRoot).subTreeOk).toBeNull();
+    expect(verifyAnchoredChain(fixture.validation).mainTreeOk).toBeNull();
   });
 });
 
@@ -157,7 +193,19 @@ describe('replay end-to-end (F5)', () => {
     expect(receipt.settlementAction).toBe('release_to_yes');
     expect(receipt.settlementTx).toBeNull();
     expect(receipt.txlineProofRef).toBe(fixture.validation.eventStatRoot);
+    expect(receipt.anchoredDailyRoot).toBe(fixture.anchoring!.dailyRoot);
+    expect(receipt.anchorSource).toBe('simulated');
     expect(outcome.payouts.map((p) => p.staker)).toEqual(['alice', 'bob']);
+  });
+
+  it('routes a wrong daily-root anchor to dispute review and refund', () => {
+    const badAnchor: ReplayFixture = {
+      ...fixture,
+      anchoring: { dailyRoot: sha256Hex('not-the-onchain-root'), source: 'simulated' },
+    };
+    const outcome = runReplay(badAnchor);
+    expect(outcome.market.state).toBe('refunded');
+    expect(outcome.receipt).toBeNull();
   });
 
   it('produces an inspectable timeline covering every lifecycle stage (F4)', () => {

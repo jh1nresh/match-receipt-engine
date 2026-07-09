@@ -24,14 +24,26 @@ export interface ProofNode {
   isRightSibling: boolean;
 }
 
-// GET /api/scores/stat-validation response shape.
+// GET /api/scores/stat-validation response shape (normalized).
 export interface TxlineStatValidation {
   ts: string;
   statToProve: string;
   eventStatRoot: string;
   statProof: ProofNode[];
-  // Anchoring eventStatRoot to the on-chain main tree is the devnet phase;
-  // v0 verifies statProof -> eventStatRoot only.
   subTreeProof: ProofNode[];
   mainTreeProof: ProofNode[];
+  // Fixture summary linking the event tree into the fixture sub-tree
+  // (wire: ScoresBatchSummary). Optional: absent on legacy fixtures, which
+  // then verify to statProof level only.
+  summary?: {
+    fixtureId: string;
+    eventStatsSubTreeRoot: string;
+  };
+}
+
+// Where a settlement's daily root came from. 'simulated' = fixture-embedded;
+// devnet/mainnet = read from the Txoracle DailyScoresMerkleRoots PDA.
+export interface RootAnchor {
+  dailyRoot: string;
+  source: 'simulated' | 'devnet' | 'mainnet';
 }
