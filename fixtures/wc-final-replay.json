@@ -1,0 +1,113 @@
+{
+  "description": "World Cup final replay: Argentina beats France 2-1; TEAM_WIN market on Argentina settles YES.",
+  "market": {
+    "marketId": "argentina-wins-final",
+    "fixtureId": "wc2026-final-1001",
+    "marketType": "TEAM_WIN",
+    "teamId": "team-argentina",
+    "condition": "team-argentina goals > team-france goals at FINISHED",
+    "network": "simulated"
+  },
+  "stakes": [
+    {
+      "staker": "alice",
+      "side": "YES",
+      "amount": 600
+    },
+    {
+      "staker": "bob",
+      "side": "YES",
+      "amount": 400
+    },
+    {
+      "staker": "carol",
+      "side": "NO",
+      "amount": 500
+    }
+  ],
+  "updates": [
+    {
+      "fixtureId": "wc2026-final-1001",
+      "participant1Id": "team-argentina",
+      "participant2Id": "team-france",
+      "participant1IsHome": true,
+      "seq": 1,
+      "ts": "2026-07-19T18:00:00Z",
+      "gameState": "LIVE",
+      "scoreSoccer": {
+        "participant1": 0,
+        "participant2": 0
+      }
+    },
+    {
+      "fixtureId": "wc2026-final-1001",
+      "participant1Id": "team-argentina",
+      "participant2Id": "team-france",
+      "participant1IsHome": true,
+      "seq": 2,
+      "ts": "2026-07-19T18:23:00Z",
+      "gameState": "LIVE",
+      "scoreSoccer": {
+        "participant1": 1,
+        "participant2": 0
+      }
+    },
+    {
+      "fixtureId": "wc2026-final-1001",
+      "participant1Id": "team-argentina",
+      "participant2Id": "team-france",
+      "participant1IsHome": true,
+      "seq": 3,
+      "ts": "2026-07-19T19:05:00Z",
+      "gameState": "LIVE",
+      "scoreSoccer": {
+        "participant1": 1,
+        "participant2": 1
+      }
+    },
+    {
+      "fixtureId": "wc2026-final-1001",
+      "participant1Id": "team-argentina",
+      "participant2Id": "team-france",
+      "participant1IsHome": true,
+      "seq": 4,
+      "ts": "2026-07-19T19:31:00Z",
+      "gameState": "LIVE",
+      "scoreSoccer": {
+        "participant1": 2,
+        "participant2": 1
+      }
+    },
+    {
+      "fixtureId": "wc2026-final-1001",
+      "participant1Id": "team-argentina",
+      "participant2Id": "team-france",
+      "participant1IsHome": true,
+      "seq": 5,
+      "ts": "2026-07-19T19:52:00Z",
+      "gameState": "FINISHED",
+      "scoreSoccer": {
+        "participant1": 2,
+        "participant2": 1
+      }
+    }
+  ],
+  "validation": {
+    "ts": "2026-07-19T19:53:00Z",
+    "statToProve": "fixture:wc2026-final-1001:final_score:2-1",
+    "eventStatRoot": "384de6e992e533f568bcce069bfca8d3cd232aacf40e782d0d85279b672d6d2d",
+    "statProof": [
+      {
+        "hash": "618b9fa1d14a35b9cc8449959a705db56fa9462d7b870bbb5531ae1ed6b7683f",
+        "isRightSibling": false
+      },
+      {
+        "hash": "524bb705e49e4d74071a2ab5c35e1ddfc26d35f3486cb86fea2e4f43a2dba3f1",
+        "isRightSibling": false
+      }
+    ],
+    "subTreeProof": [],
+    "mainTreeProof": []
+  },
+  "sourceEndpoint": "/api/scores/stat-validation (replayed fixture)"
+}
