@@ -41,6 +41,12 @@ export class SettlementEngine {
   // Non-final updates are recorded but do not change state.
   observe(update: TxlineScoreUpdate): void {
     if (update.fixtureId !== this.market.fixtureId) return;
+    // Real feeds re-emit final state; anything after the first FINISHED is
+    // ignored so a duplicate can never hit an illegal transition.
+    if (this.finalUpdate) {
+      this.record(`ignored update after final result (seq ${update.seq})`, update.ts);
+      return;
+    }
     if (update.gameState !== 'FINISHED') {
       this.record(
         `observed ${update.gameState} ${update.scoreSoccer.participant1}-${update.scoreSoccer.participant2} (seq ${update.seq})`,
