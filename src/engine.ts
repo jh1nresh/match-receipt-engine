@@ -1,10 +1,10 @@
-import { SimulatedEscrowLedger, type Payout, type Stake } from './ledger.js';
-import { verifyStatProof } from './merkle.js';
-import { buildReceipt } from './receipt.js';
-import { resolveMarket } from './resolver.js';
-import { transition } from './stateMachine.js';
-import type { Market, MarketResult, SettlementReceipt, TimelineEvent } from './types.js';
-import type { TxlineScoreUpdate, TxlineStatValidation } from './txline/types.js';
+import { SimulatedEscrowLedger, type Payout, type Stake } from './ledger';
+import { verifyStatProof } from './merkle';
+import { buildReceipt } from './receipt';
+import { resolveMarket } from './resolver';
+import { transition } from './stateMachine';
+import type { Market, MarketResult, SettlementReceipt, TimelineEvent } from './types';
+import type { TxlineScoreUpdate, TxlineStatValidation } from './txline/types';
 
 export interface SettlementOutcome {
   market: Market;

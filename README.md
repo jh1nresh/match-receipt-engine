@@ -42,12 +42,17 @@ proof passes a deterministic rule.
 
 ```bash
 npm install
-npm run check     # typecheck + 24 tests
-npm run replay    # full lifecycle demo from fixtures/wc-final-replay.json
+npm run check     # typecheck + 33 tests
+npm run dev       # web demo at http://localhost:3000
+npm run replay    # same lifecycle as a CLI trail
 ```
 
-`npm run replay` prints the inspectable trail: timeline, receipt, and payouts —
-the judge-facing answer to "why did funds move?"
+The web demo shows the four judge-facing panels: TxLINE match feed, market
+card (stakes, state, payouts), settlement timeline ("why funds moved"), and
+the receipt + Merkle proof inspector. `/?tamper=1` runs the adversarial demo:
+a stat that does not match the TxLINE root fails verification, settlement is
+blocked, and every stake is refunded. `GET /api/replay?tamper=1` serves the
+same outcome as raw JSON.
 
 Regenerate the fixture (rebuilds the Merkle tree): `npx tsx scripts/make-fixture.ts`
 
@@ -59,16 +64,36 @@ Regenerate the fixture (rebuilds the Merkle tree): `npx tsx scripts/make-fixture
 | Stat proof for settlement | `GET /api/scores/stat-validation` |
 | Fixture metadata | `GET /api/fixtures/snapshot` |
 
-v0 replays fixture data shaped after these schemas; live guest-JWT ingest is
-the next milestone (World Cup data is fee-waived through the submission
-deadline).
+The demo replays fixture data shaped after these schemas (wire types in
+`src/txline/wire.ts` follow the OpenAPI spec exactly: integer IDs,
+epoch-millis timestamps, per-period soccer scores, base64 proof hashes).
+
+## Live mode
+
+`src/txline/client.ts` implements the live path: `startGuestSession()` is
+verified working (anonymous 30-day JWT, no credentials). Data endpoints
+additionally require an `X-Api-Token`, which even the free World Cup tier
+only issues after a one-time on-chain subscription (Service Level 1/12, no
+payment) plus wallet-signed activation via `POST /api/token/activate`. Once
+you have a token:
+
+```bash
+TXLINE_API_TOKEN=... # then wire TxlineClient into the feed instead of fixtures
+```
+
+`src/txline/adapter.ts` normalizes wire payloads (gameState mapping is
+conservative: unknown states are never treated as final). Known gap: TxLINE's
+on-chain leaf encoding for `ScoreStat` is not documented, so live proofs are
+displayed but cannot be independently re-verified yet — fixture proofs use
+our own encoding and verify fully. This is a TxLINE API feedback item for the
+submission.
 
 ## Roadmap to submission
 
-1. ✅ Deterministic engine: resolver + state machine + receipt + Merkle verify + simulated escrow (this repo)
-2. ⬜ TxLINE live client (guest JWT session, free World Cup tier)
-3. ⬜ Web UI: market card, receipt/proof inspector, settlement timeline
-4. ⬜ Solana devnet escrow program (only after 1–3 are solid; simulated stays the honest fallback)
+1. ✅ Deterministic engine: resolver + state machine + receipt + Merkle verify + simulated escrow
+2. ✅ TxLINE wire types + live client + adapter (guest JWT verified; API token activation documented above)
+3. ✅ Web UI: match feed, market card, receipt/proof inspector, settlement timeline, tamper demo
+4. ⬜ Solana devnet escrow program (only after live data lands; simulated stays the honest fallback)
 5. ⬜ Public deploy + 5-minute demo video + technical docs
 
 ## Honesty boundary

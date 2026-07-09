@@ -1,4 +1,4 @@
-import type { TxlineScoreUpdate, TxlineStatValidation } from './txline/types.js';
+import type { TxlineScoreUpdate, TxlineStatValidation } from './txline/types';
 
 export type MarketState =
   | 'created'

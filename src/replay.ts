@@ -1,5 +1,5 @@
-import { SettlementEngine, type SettlementOutcome } from './engine.js';
-import type { ReplayFixture } from './types.js';
+import { SettlementEngine, type SettlementOutcome } from './engine';
+import type { ReplayFixture } from './types';
 
 // Demo mode (F5): drive the full lifecycle from a recorded fixture so the
 // demo works even when no live match is happening.
