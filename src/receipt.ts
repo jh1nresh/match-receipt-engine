@@ -1,6 +1,6 @@
-import { sha256Hex } from './merkle.js';
-import type { Market, MarketResult, SettlementReceipt } from './types.js';
-import type { TxlineScoreUpdate, TxlineStatValidation } from './txline/types.js';
+import { sha256Hex } from './merkle';
+import type { Market, MarketResult, SettlementReceipt } from './types';
+import type { TxlineScoreUpdate, TxlineStatValidation } from './txline/types';
 
 // Stable key order so proofHash is reproducible from the receipt contents.
 export function canonicalJson(value: unknown): string {

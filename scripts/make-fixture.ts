@@ -1,9 +1,9 @@
 // Generates fixtures/wc-final-replay.json with a Merkle-consistent stat proof.
 // Run: npx tsx scripts/make-fixture.ts
 import { writeFileSync } from 'node:fs';
-import { buildStatProof } from '../src/merkle.js';
-import type { ReplayFixture } from '../src/types.js';
-import type { TxlineScoreUpdate } from '../src/txline/types.js';
+import { buildStatProof } from '../src/merkle';
+import type { ReplayFixture } from '../src/types';
+import type { TxlineScoreUpdate } from '../src/txline/types';
 
 const fixtureId = 'wc2026-final-1001';
 const statToProve = `fixture:${fixtureId}:final_score:2-1`;

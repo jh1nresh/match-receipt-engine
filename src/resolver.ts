@@ -1,5 +1,5 @@
-import type { Market, MarketResult } from './types.js';
-import type { TxlineScoreUpdate } from './txline/types.js';
+import type { Market, MarketResult } from './types';
+import type { TxlineScoreUpdate } from './txline/types';
 
 // Pure deterministic resolver. Same inputs always produce the same result;
 // no model, no heuristics, no clock.

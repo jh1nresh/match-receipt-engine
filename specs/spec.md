@@ -42,15 +42,31 @@ Acceptance (verified by `npm run check`, 24 tests):
   receipt and reproducible `proofHash`.
 - Tampered fixture ends `refunded` with all stakes returned.
 
-## P2 (next)
+## P2 (live client + UI — done 2026-07-09)
 
-1. TxLINE live client: `POST /auth/guest/start` → Bearer JWT, score snapshot +
-   stat-validation fetch, binary→hex proof conversion at the boundary.
-2. Web UI: match feed panel, market card, receipt/proof inspector, settlement
-   timeline (the four panels from the brief).
-3. Devnet escrow program with receipt/proof reference field + settle/refund
-   instructions; UI links devnet txs to the explorer.
-4. Demo package: deploy, 5-min video, technical docs, TxLINE API feedback.
+1. ✅ TxLINE wire types (`src/txline/wire.ts`, OpenAPI-exact), live client
+   (`client.ts`; guest JWT verified working against production), adapter
+   (`adapter.ts`: int→string IDs, epoch→ISO, per-period goal totalling,
+   base64→hex proofs, conservative gameState mapping). 9 adapter tests.
+2. ✅ Web UI (Next.js 15 + Tailwind 4): match feed, market card with stakes +
+   payouts, settlement timeline, receipt + Merkle proof inspector, honesty
+   banner, `/?tamper=1` adversarial demo, `GET /api/replay` JSON endpoint.
+   Verified in browser (desktop + mobile, zero console errors).
+
+Known constraints discovered:
+- Free World Cup tier still requires one-time on-chain subscription +
+  wallet-signed `POST /api/token/activate` for `X-Api-Token` (guest JWT alone
+  → 403 on data endpoints). Live wiring is env-var gated, replay is default.
+- TxLINE leaf encoding for `ScoreStat` is undocumented → live proofs shown
+  but not independently re-verifiable yet (submission feedback item).
+
+## P3 (next)
+
+1. Devnet escrow program with receipt/proof reference field + settle/refund
+   instructions; UI links devnet txs to the explorer. Go/no-go by 2026-07-15.
+2. Demo package: Vercel deploy, 5-min video, technical docs, TxLINE feedback.
+3. Optional: complete free-tier token activation with a disposable wallet to
+   light up live mode.
 
 ## Security / compliance receipt (v0)
 

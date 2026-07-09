@@ -1,4 +1,4 @@
-import type { MarketResult, Side } from './types.js';
+import type { MarketResult, Side } from './types';
 
 export interface Stake {
   staker: string;

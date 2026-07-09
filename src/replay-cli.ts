@@ -1,8 +1,8 @@
 // Prints the full inspectable trail for a replay fixture.
 // Run: npm run replay
 import { readFileSync } from 'node:fs';
-import { runReplay } from './replay.js';
-import type { ReplayFixture } from './types.js';
+import { runReplay } from './replay';
+import type { ReplayFixture } from './types';
 
 const path = process.argv[2];
 if (!path) {

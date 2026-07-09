@@ -1,14 +1,14 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { SettlementEngine } from '../src/engine.js';
-import { SimulatedEscrowLedger } from '../src/ledger.js';
-import { buildStatProof, foldProof, sha256Hex, verifyStatProof } from '../src/merkle.js';
-import { canonicalJson } from '../src/receipt.js';
-import { resolveMarket } from '../src/resolver.js';
-import { runReplay } from '../src/replay.js';
-import { IllegalTransitionError, isTerminal, transition } from '../src/stateMachine.js';
-import type { Market, ReplayFixture } from '../src/types.js';
-import type { TxlineScoreUpdate } from '../src/txline/types.js';
+import { SettlementEngine } from '../src/engine';
+import { SimulatedEscrowLedger } from '../src/ledger';
+import { buildStatProof, foldProof, sha256Hex, verifyStatProof } from '../src/merkle';
+import { canonicalJson } from '../src/receipt';
+import { resolveMarket } from '../src/resolver';
+import { runReplay } from '../src/replay';
+import { IllegalTransitionError, isTerminal, transition } from '../src/stateMachine';
+import type { Market, ReplayFixture } from '../src/types';
+import type { TxlineScoreUpdate } from '../src/txline/types';
 
 const fixture = JSON.parse(
   readFileSync(new URL('../fixtures/wc-final-replay.json', import.meta.url), 'utf8'),
@@ -200,5 +200,15 @@ describe('engine guards', () => {
     engine.fund(fixture.stakes);
     engine.observe({ ...finalUpdate(2, 1), fixtureId: 'other-fixture' });
     expect(engine.state).toBe('awaiting_result');
+  });
+
+  it('ignores re-emitted final updates instead of throwing (feed idempotency)', () => {
+    const engine = new SettlementEngine(fixture.market);
+    engine.fund(fixture.stakes);
+    engine.observe(finalUpdate(2, 1));
+    expect(engine.state).toBe('receipt_observed');
+    engine.observe(finalUpdate(2, 1));
+    engine.observe({ ...finalUpdate(2, 1), gameState: 'LIVE' });
+    expect(engine.state).toBe('receipt_observed');
   });
 });

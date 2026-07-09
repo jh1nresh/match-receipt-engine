@@ -1,4 +1,4 @@
-import type { MarketState } from './types.js';
+import type { MarketState } from './types';
 
 const TRANSITIONS: Record<MarketState, MarketState[]> = {
   created: ['funded_or_simulated', 'refunded'],
