@@ -6,6 +6,10 @@ receipts that deterministically resolve escrowed prediction markets.
 Built for the Superteam World Cup Hackathon — **Prediction Markets and
 Settlement** track (TxLINE by TxODDS as primary data source).
 
+**Live demo:** https://match-receipt-engine.vercel.app
+([tamper demo](https://match-receipt-engine.vercel.app/?tamper=1) ·
+[raw JSON](https://match-receipt-engine.vercel.app/api/replay))
+
 ```text
 live event → verifiable receipt → deterministic settlement → payout / refund / dispute → inspectable proof trail
 ```
@@ -26,6 +30,12 @@ proof passes a deterministic rule.
   (`statToProve`, `eventStatRoot`, `statProof` of `{hash, isRightSibling}`
   nodes) are verified by recomputing the root. A tampered stat or root fails
   verification and routes to dispute review — it can never settle.
+- **On-chain root anchoring**: the full three-level chain
+  (`stat → eventStatRoot → fixture sub-tree → daily root`) is verified against
+  a daily-root anchor. `src/txline/anchoring.ts` derives the Txoracle
+  `DailyScoresMerkleRoots` PDA (`"daily_scores_roots"` + epochDay u16 LE) and
+  reads real published roots from mainnet/devnet via public RPC — no wallet
+  needed. Probe it live: `npx tsx scripts/check-anchoring.ts 20641`.
 - **Deterministic resolver**: one market type (`TEAM_WIN`; draw resolves NO).
   Pure function, no model, no clock.
 - **Settlement state machine**: `created → funded_or_simulated →
@@ -83,18 +93,22 @@ TXLINE_API_TOKEN=... # then wire TxlineClient into the feed instead of fixtures
 
 `src/txline/adapter.ts` normalizes wire payloads (gameState mapping is
 conservative: unknown states are never treated as final). Known gap: TxLINE's
-on-chain leaf encoding for `ScoreStat` is not documented, so live proofs are
-displayed but cannot be independently re-verified yet — fixture proofs use
-our own encoding and verify fully. This is a TxLINE API feedback item for the
-submission.
+leaf/link serialization for `ScoreStat` and the tree levels is not documented
+(and the on-chain daily-roots slot metadata differs from the docs), so live
+proofs are displayed but not yet independently re-verified — fixture proofs
+use our own documented encoding and verify the full three-level chain. The
+anchoring infrastructure (PDA derivation, root fetch, chain fold) is in place
+and validated against live accounts; the remaining unknown is serialization
+only. This is a TxLINE API feedback item for the submission.
 
 ## Roadmap to submission
 
 1. ✅ Deterministic engine: resolver + state machine + receipt + Merkle verify + simulated escrow
 2. ✅ TxLINE wire types + live client + adapter (guest JWT verified; API token activation documented above)
 3. ✅ Web UI: match feed, market card, receipt/proof inspector, settlement timeline, tamper demo
-4. ⬜ Solana devnet escrow program (only after live data lands; simulated stays the honest fallback)
-5. ⬜ Public deploy + 5-minute demo video + technical docs
+4. ✅ Public deploy: https://match-receipt-engine.vercel.app
+5. ⬜ Devnet escrow + TxLINE root anchoring — see [#2](https://github.com/JhiNResH/match-receipt-engine/issues/2) (go decision, lands by 07-15 or simulated stays)
+6. ⬜ 5-minute demo video + submission docs + TxLINE API feedback
 
 ## Honesty boundary
 

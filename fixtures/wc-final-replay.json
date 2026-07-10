@@ -106,8 +106,38 @@
         "isRightSibling": false
       }
     ],
-    "subTreeProof": [],
-    "mainTreeProof": []
+    "subTreeProof": [
+      {
+        "hash": "384de6e992e533f568bcce069bfca8d3cd232aacf40e782d0d85279b672d6d2d",
+        "isRightSibling": true
+      },
+      {
+        "hash": "19d49dae88469a3c60631e8865bb874c6d4e29aa8123784bb4404993c436650c",
+        "isRightSibling": true
+      },
+      {
+        "hash": "badaefc771a9520c15e41a64a112f23bd900b8b95f05f0bcd0705291a00d1686",
+        "isRightSibling": false
+      }
+    ],
+    "mainTreeProof": [
+      {
+        "hash": "d00e28fdf812a95b247c8ecb636ce4ed2058b07fa9b21fd2e9a8521411865319",
+        "isRightSibling": false
+      },
+      {
+        "hash": "6fd298135e4bb0b1149f75b16246097c6d738df6f7f94b6a626d531ab81dca72",
+        "isRightSibling": false
+      }
+    ],
+    "summary": {
+      "fixtureId": "wc2026-final-1001",
+      "eventStatsSubTreeRoot": "4a186e4c790ef8bb436b094c747c35c785197a89e0c5e170269a786bb1eadefe"
+    }
   },
-  "sourceEndpoint": "/api/scores/stat-validation (replayed fixture)"
+  "sourceEndpoint": "/api/scores/stat-validation (replayed fixture)",
+  "anchoring": {
+    "dailyRoot": "99e177c122871c23b500b29f0f16837aff3792828095e39db16f919e1e4c74f9",
+    "source": "simulated"
+  }
 }

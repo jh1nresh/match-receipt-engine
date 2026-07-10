@@ -7,6 +7,5 @@
 .next/
 .vercel
 dist/
-idl/*.so
 next-env.d.ts
 node_modules/
