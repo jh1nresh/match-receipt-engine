@@ -6,6 +6,10 @@ receipts that deterministically resolve escrowed prediction markets.
 Built for the Superteam World Cup Hackathon — **Prediction Markets and
 Settlement** track (TxLINE by TxODDS as primary data source).
 
+**Live demo:** https://match-receipt-engine.vercel.app
+([tamper demo](https://match-receipt-engine.vercel.app/?tamper=1) ·
+[raw JSON](https://match-receipt-engine.vercel.app/api/replay))
+
 ```text
 live event → verifiable receipt → deterministic settlement → payout / refund / dispute → inspectable proof trail
 ```
@@ -102,8 +106,9 @@ only. This is a TxLINE API feedback item for the submission.
 1. ✅ Deterministic engine: resolver + state machine + receipt + Merkle verify + simulated escrow
 2. ✅ TxLINE wire types + live client + adapter (guest JWT verified; API token activation documented above)
 3. ✅ Web UI: match feed, market card, receipt/proof inspector, settlement timeline, tamper demo
-4. ⬜ Solana devnet escrow program (only after live data lands; simulated stays the honest fallback)
-5. ⬜ Public deploy + 5-minute demo video + technical docs
+4. ✅ Public deploy: https://match-receipt-engine.vercel.app
+5. ⬜ Devnet escrow + TxLINE root anchoring — see [#2](https://github.com/JhiNResH/match-receipt-engine/issues/2) (go decision, lands by 07-15 or simulated stays)
+6. ⬜ 5-minute demo video + submission docs + TxLINE API feedback
 
 ## Honesty boundary
 
