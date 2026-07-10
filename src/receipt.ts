@@ -1,6 +1,6 @@
 import { sha256Hex } from './merkle';
 import type { Market, MarketResult, SettlementReceipt } from './types';
-import type { TxlineScoreUpdate, TxlineStatValidation } from './txline/types';
+import type { RootAnchor, TxlineScoreUpdate, TxlineStatValidation } from './txline/types';
 
 // Stable key order so proofHash is reproducible from the receipt contents.
 export function canonicalJson(value: unknown): string {
@@ -20,8 +20,9 @@ export function buildReceipt(args: {
   result: MarketResult;
   sourceEndpoint: string;
   settlementTx?: string | null;
+  anchor?: RootAnchor | null;
 }): SettlementReceipt {
-  const { market, finalUpdate, validation, proofVerified, result, sourceEndpoint } = args;
+  const { market, finalUpdate, validation, proofVerified, result, sourceEndpoint, anchor } = args;
   const observedValue = `${finalUpdate.scoreSoccer.participant1}-${finalUpdate.scoreSoccer.participant2}`;
   const observed = {
     fixtureId: finalUpdate.fixtureId,
@@ -49,5 +50,7 @@ export function buildReceipt(args: {
     settlementAction: result === 'YES_WINS' ? 'release_to_yes' : 'release_to_no',
     settlementTx: args.settlementTx ?? null,
     status: proofVerified ? 'verified' : 'failed_verification',
+    anchoredDailyRoot: anchor?.dailyRoot ?? null,
+    anchorSource: anchor?.source ?? null,
   };
 }

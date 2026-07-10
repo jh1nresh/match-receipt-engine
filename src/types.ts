@@ -1,4 +1,4 @@
-import type { TxlineScoreUpdate, TxlineStatValidation } from './txline/types';
+import type { RootAnchor, TxlineScoreUpdate, TxlineStatValidation } from './txline/types';
 
 export type MarketState =
   | 'created'
@@ -46,6 +46,10 @@ export interface SettlementReceipt {
   settlementAction: 'release_to_yes' | 'release_to_no' | 'refund_all';
   settlementTx: string | null;
   status: 'verified' | 'simulated_proof' | 'failed_verification';
+  // Daily root the proof chain was anchored to, or null when only the stat
+  // proof was verified (unanchored mode).
+  anchoredDailyRoot: string | null;
+  anchorSource: 'simulated' | 'devnet' | 'mainnet' | null;
 }
 
 export interface TimelineEvent {
@@ -61,4 +65,7 @@ export interface ReplayFixture {
   updates: TxlineScoreUpdate[];
   validation: TxlineStatValidation;
   sourceEndpoint: string;
+  // Daily root the fixture's proof chain anchors to; absent on legacy
+  // fixtures (stat-proof-only verification).
+  anchoring?: RootAnchor;
 }

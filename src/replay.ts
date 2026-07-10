@@ -7,6 +7,6 @@ export function runReplay(fixture: ReplayFixture): SettlementOutcome {
   const engine = new SettlementEngine(fixture.market);
   engine.fund(fixture.stakes);
   for (const update of fixture.updates) engine.observe(update);
-  engine.attachProof(fixture.validation);
+  engine.attachProof(fixture.validation, fixture.anchoring);
   return engine.settle(fixture.sourceEndpoint);
 }
