@@ -11,12 +11,64 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
+      - name: Checkout immutable reviewed CI helpers
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: 876a98d3009e6378b5baacfb0238f5d09f071c25
+          persist-credentials: false
+      - name: Stage immutable CI helpers outside the application checkout
+        id: trusted_bootstrap
+        run: |
+          python3 -I - <<'PY'
+          import hashlib
+          import os
+          from pathlib import Path
+          import re
+          import shutil
+          import signal
+          import tempfile
+
+          def interrupted(signum, frame):
+              raise SystemExit(128 + signum)
+
+          signal.signal(signal.SIGTERM, interrupted)
+          run_id, attempt = os.environ['GITHUB_RUN_ID'], os.environ['GITHUB_RUN_ATTEMPT']
+          assert re.fullmatch(r'[0-9]{1,20}', run_id) and re.fullmatch(r'[0-9]{1,6}', attempt)
+          owner = run_id + '-' + attempt
+          parent = Path(os.environ['RUNNER_TEMP']).resolve()
+          assert parent.is_dir() and '\n' not in str(parent) and '\r' not in str(parent)
+          source = Path(os.environ['GITHUB_WORKSPACE']).resolve()
+          expected_files = {'.github/scripts/check-incident-loader.py': '7de74c08c2e4b31b5201eaf50c818cbcb9bfd57dc1ce22c00fe5205d97790655'}
+          directory = None
+          try:
+              directory = Path(tempfile.mkdtemp(prefix='incident-bootstrap-' + owner + '-', dir=parent))
+              (directory / '.owner').write_text(owner, encoding='utf-8')
+              for relative, expected in expected_files.items():
+                  original = source / relative
+                  assert original.is_file() and not original.is_symlink()
+                  data = original.read_bytes()
+                  assert hashlib.sha256(data).hexdigest() == expected, 'Unreviewed CI helper bytes'
+                  destination = directory / Path(relative).name
+                  destination.write_bytes(data)
+                  destination.chmod(0o500)
+              stat = directory.stat()
+              identity = str(stat.st_dev) + ':' + str(stat.st_ino)
+              with open(os.environ['GITHUB_OUTPUT'], 'a', encoding='utf-8') as output:
+                  output.write('directory=' + str(directory) + '\nidentity=' + identity + '\n')
+          except BaseException:
+              if directory is not None:
+                  shutil.rmtree(directory)
+              raise
+          print('Frozen', len(expected_files), 'reviewed helpers outside the application checkout')
+          PY
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           persist-credentials: false
       - name: Reject incident loader before dependency installation
-        run: python3 .github/scripts/check-incident-loader.py
+        env:
+          INCIDENT_BOOTSTRAP_DIR: ${{ steps.trusted_bootstrap.outputs.directory }}
+        run: python3 -I "$INCIDENT_BOOTSTRAP_DIR/check-incident-loader.py"
       - name: Install without lifecycle scripts, then verify without network or host files
         env:
           IMAGE: node@sha256:9f0dde62d10e7ff7a310ecaebd66225f6b46c17e6cb778449a77b05d3541bea2
@@ -49,3 +101,33 @@ jobs:
           docker run --rm --network none --security-opt no-new-privileges --pids-limit 256 --memory 3g --cpus 2             -v "$GITHUB_WORKSPACE:/source:ro" -v "$volume:/work" "$IMAGE"             sh -ec 'cp -a /source/. /work/ && chown -R 1000:1000 /work'
           docker run --rm --cap-drop ALL --security-opt no-new-privileges --pids-limit 256 --memory 3g --cpus 2             --user 1000:1000 -e HOME=/tmp -e CI=true -e NPM_CONFIG_CACHE=/tmp/npm             -v "$volume:/work" -w /work "$IMAGE" npm ci --ignore-scripts --no-audit --fund=false
           docker run --rm --network none --cap-drop ALL --security-opt no-new-privileges --pids-limit 256 --memory 3g --cpus 2             --user 1000:1000 -e HOME=/tmp -e CI=true             -v "$volume:/work" -w /work "$IMAGE" sh -ec 'node .github/scripts/check-ci-boundary.cjs && npm --ignore-scripts run check'
+      - name: Clean only the bootstrap created by this job
+        if: always()
+        env:
+          INCIDENT_BOOTSTRAP_DIR: ${{ steps.trusted_bootstrap.outputs.directory }}
+          INCIDENT_BOOTSTRAP_ID: ${{ steps.trusted_bootstrap.outputs.identity }}
+        run: |
+          python3 -I - <<'PY'
+          import os
+          from pathlib import Path
+          import re
+          import shutil
+
+          raw = os.environ.get('INCIDENT_BOOTSTRAP_DIR', '')
+          if raw:
+              run_id, attempt = os.environ['GITHUB_RUN_ID'], os.environ['GITHUB_RUN_ATTEMPT']
+              assert re.fullmatch(r'[0-9]{1,20}', run_id) and re.fullmatch(r'[0-9]{1,6}', attempt)
+              owner = run_id + '-' + attempt
+              parent = Path(os.environ['RUNNER_TEMP']).resolve()
+              directory = Path(raw)
+              assert directory.parent == parent and directory.name.startswith('incident-bootstrap-' + owner + '-')
+              assert not directory.is_symlink(), 'Bootstrap directory was replaced by a symlink'
+              if directory.exists():
+                  stat = directory.stat()
+                  identity = str(stat.st_dev) + ':' + str(stat.st_ino)
+                  assert identity == os.environ.get('INCIDENT_BOOTSTRAP_ID'), 'Creation identity not established'
+                  assert directory.is_dir() and stat.st_uid == os.getuid()
+                  assert (directory / '.owner').read_text(encoding='utf-8') == owner
+                  shutil.rmtree(directory)
+          print('Owned bootstrap closeout completed; no unrecorded directory was removed')
+          PY
