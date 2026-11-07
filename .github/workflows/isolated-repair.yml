@@ -1,0 +1,51 @@
+name: Isolated repair verification
+on:
+  pull_request:
+permissions:
+  contents: read
+concurrency:
+  group: isolated-repair-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+jobs:
+  check:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - name: Reject incident loader before dependency installation
+        run: python3 .github/scripts/check-incident-loader.py
+      - name: Install without lifecycle scripts, then verify without network or host files
+        env:
+          IMAGE: node@sha256:9f0dde62d10e7ff7a310ecaebd66225f6b46c17e6cb778449a77b05d3541bea2
+        run: |
+          set -euo pipefail
+          volume="incident-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          label="${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          created=false
+          cleanup() {
+            status=$?
+            if [ "$created" = true ]; then
+              actual="$(docker volume inspect --format '{{ index .Labels "codex.incident.run" }}' "$volume")"
+              if [ "$actual" = "$label" ]; then
+                docker volume rm "$volume" || status=1
+              else
+                echo 'Owned CI volume label mismatch' >&2
+                status=1
+              fi
+            fi
+            exit "$status"
+          }
+          trap cleanup EXIT
+          if docker volume inspect "$volume" >/dev/null 2>&1; then
+            echo 'CI volume already exists; refusing reuse' >&2
+            exit 1
+          fi
+          docker pull "$IMAGE"
+          docker volume create --label "codex.incident.run=$label" "$volume"
+          created=true
+          docker run --rm --network none --security-opt no-new-privileges --pids-limit 256 --memory 3g --cpus 2             -v "$GITHUB_WORKSPACE:/source:ro" -v "$volume:/work" "$IMAGE"             sh -ec 'cp -a /source/. /work/ && chown -R 1000:1000 /work'
+          docker run --rm --cap-drop ALL --security-opt no-new-privileges --pids-limit 256 --memory 3g --cpus 2             --user 1000:1000 -e HOME=/tmp -e CI=true -e NPM_CONFIG_CACHE=/tmp/npm             -v "$volume:/work" -w /work "$IMAGE" npm ci --ignore-scripts --no-audit --fund=false
+          docker run --rm --network none --cap-drop ALL --security-opt no-new-privileges --pids-limit 256 --memory 3g --cpus 2             --user 1000:1000 -e HOME=/tmp -e CI=true             -v "$volume:/work" -w /work "$IMAGE" sh -ec 'node .github/scripts/check-ci-boundary.cjs && npm --ignore-scripts run check'
